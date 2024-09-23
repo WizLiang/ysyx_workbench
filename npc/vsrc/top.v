@@ -1,22 +1,33 @@
 module top(
   input clk,
   input rst,
-
-  input a,
-  input b,
-
-  input sw,
-  output reg f,
-  output led1
+  input [7:0] data_in,
+  output reg [7:0] seg0,
+  output [15:0]led
 );
-  always@(posedge clk)begin
-  if(rst) begin 
-    f <= 1'b0;
-  end
-  else begin 
-    f<= a^b;
-  end
-  end 
-  assign led1 = sw;
-  //assign f = a ^ b;
+
+// light u_light(
+//     .clk(clk),
+//     .rst(rst),
+//     .led(led)
+// );
+wire [2:0] u_digit;
+encoder_83 u_encoder_83(
+  .in(data_in),
+  .out(u_digit[2:0]),
+  .valid(led[0])
+);
+
+seven_seg_decoder u_seven_seg_decoder(
+  .digit({1'b0,u_digit}),
+  .segments(seg0[7:1])
+);
+
+assign seg0[0] = 1'b0;
+
+//assign seg0[7:0] = 8'b00000010;
+
+
+
+
 endmodule

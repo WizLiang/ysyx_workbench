@@ -1,6 +1,6 @@
 TOPNAME = top
 #constain flie dir
-NXDC_FILES = constr/top.nxdc
+NXDC_FILES = constr/$(TOPNAME).nxdc
 INC_PATH ?=
 
 BUILD_DIR = ./build
@@ -28,6 +28,9 @@ $(SRC_AUTO_BIND): $(NXDC_FILES)
 # project source
 VSRCS = $(shell find $(abspath ./vsrc) -name "*.v") #abspath = absoute path
 CSRCS = $(shell find $(abspath ./csrc) -name "*.c" -or -name "*.cc" -or -name "*.cpp")
+# # Project source excluding testbenches
+# CSRCS = $(filter-out $(wildcard ./csrc/*_tb.cpp), $(shell find $(abspath ./csrc) -name "*.c" -or -name "*.cc" -or -name "*.cpp"))
+# #CSRCS = $(filter-out $(wildcard ./csrc/*_tb.cpp), $(shell find $(abspath ./csrc) -name "*.c" -or -name "*.cc" -or -name "*.cpp"))
 CSRCS += $(SRC_AUTO_BIND)
 
 # rules for NVBoard
@@ -35,7 +38,8 @@ include $(NVBOARD_HOME)/scripts/nvboard.mk
 
 # rules for verilator
 INCFLAGS = $(addprefix -I, $(INC_PATH))  #add prefix
-CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\""
+CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" 
+
 
 #verilator
 $(BIN): $(VSRCS) $(CSRCS) $(NVBOARD_ARCHIVE)
@@ -52,6 +56,13 @@ all:$(BIN)
 sim:
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
 	@echo "Write this Makefile by your self."
+	#$(BIN) +trace  # turn on the wave
+	$(VERILATOR)  --cc --exe --build --trace-fst -j 0 \
+		--top-module $(TOPNAME)\
+		$(VSRCS) $(abspath ./tb_csrc/$(TOPNAME)_tb.cpp)
+	./obj_dir/V$(TOPNAME)
+	gtkwave waveform.fst 
+
 
 
 run: $(BIN)
@@ -60,11 +71,11 @@ run: $(BIN)
 
 #$(VERILATOR) --cc --exe --build --trace-fst -j 0 -Wall top.v top_tb.cpp 
 
-
-#verilator --cc --exe --build --trace-fst -j 0 -Wall top.v top_tb.cpp
+#verilator --cc --exe --build --trace-fst -j 0 -Wall top.v top_tb.cpp 
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -r ./obj_dir
 
 
 include ../Makefile
