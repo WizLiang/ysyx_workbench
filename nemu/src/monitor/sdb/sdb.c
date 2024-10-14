@@ -18,6 +18,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #include "sdb.h"
+#include <memory/paddr.h>
 
 static int is_batch_mode = false;
 
@@ -47,12 +48,91 @@ static int cmd_c(char *args) {
   return 0;
 }
 
+//bool exit_flag = 0;  
+extern NEMUState nemu_state;
 
 static int cmd_q(char *args) {
-  return -1;
+  //return -1;
+  /*  (nemu) q
+make: *** [/home/wizard/ysyx-workbench/nemu/scripts/native.mk:38: run] Error 1
+*/
+  //exit_flag = 1;
+  nemu_state.state = NEMU_QUIT;
+  return 0;
+  //exit(0);
 }
 
 static int cmd_help(char *args);
+
+static int cmd_si(char *args){
+  uint64_t n =1;
+  if(args != NULL){
+    n = strtoull(args, NULL, 10); // unsigned long long int
+  }
+  if(n < 1)printf("invalid input!");
+  cpu_exec(n);
+  return 0;
+};
+
+static int cmd_info(char *args){
+  if(!strcmp(args,"r")){isa_reg_display();}
+  if (!strcmp(args, "w"))
+  {
+    printf("Sorry! I haven't implemented this function so far.\n");
+  }
+  return 0;
+};
+
+static int cmd_x(char *args){
+  char *n_str;
+  char *expr_str;
+
+  //use strtok flatten the args
+  n_str = strtok(args," ");
+  expr_str = strtok(NULL," ");
+
+  //illegal input check
+  if (n_str == NULL || expr_str == NULL) {
+    printf("Usage: x N EXPR\n");
+    return 0;
+  }
+  // char to int
+  int N = strtol(n_str, NULL, 10);//long int -- strtol while unsigned long int --strtoul
+  if (N <= 0) {
+    printf("Invalid number of words: %s\n", n_str);
+    return 0;
+  }  
+  // EXPR (expression) to a starting memory address.
+  // For now, we assume EXPR is a simple hexadecimal number.
+  paddr_t addr = strtoull(expr_str, NULL, 16);
+
+  // Loop through N 4-byte words and print them in hexadecimal.
+  for (int i = 0; i < N; i++) {
+    word_t data = paddr_read(addr + i * 4, 4);  // Read 4 bytes (1 word) from memory.
+    printf("0x%08x: 0x%08x\n", addr + i * 4, data);
+  }
+
+  return 0;
+}
+
+static int cmd_p(char *args) {
+  if (args == NULL) {
+    printf("Usage: p EXPR\n");
+    return 0;
+  }
+
+  bool success = true;
+  sword_t result = expr(args, &success);
+
+  if (success) {
+    printf("%d\n", result);
+  } else {
+    printf("Invalid expression!\n");
+  }
+
+  return 0;
+}
+
 
 static struct {
   const char *name;
@@ -62,9 +142,12 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-
+  
   /* TODO: Add more commands */
-
+  { "si", "Step through N instructions, default is 1 if not specified", cmd_si},
+  { "info", "Print the register state or monitor information", cmd_info},
+  { "x", "Scan memory: x N EXPR", cmd_x },//note : this function haven't fully implemented yet.
+  { "p", "Evaluate the expression EXPR and display the result", cmd_p },
 };
 
 #define NR_CMD ARRLEN(cmd_table)
@@ -103,12 +186,13 @@ void sdb_mainloop() {
   }
 
   for (char *str; (str = rl_gets()) != NULL; ) {
+    
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */
     char *cmd = strtok(str, " ");
     if (cmd == NULL) { continue; }
-
+    
     /* treat the remaining string as the arguments,
      * which may need further parsing
      */
@@ -131,6 +215,10 @@ void sdb_mainloop() {
     }
 
     if (i == NR_CMD) { printf("Unknown command '%s'\n", cmd); }
+    //if (exit_flag ) {exit(0);}
+    if (nemu_state.state == NEMU_QUIT) {  // 检查退出标志和全局状态
+      break;
+    }
   }
 }
 

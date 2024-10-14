@@ -32,8 +32,8 @@ static void welcome() {
   Log("Build time: %s, %s", __TIME__, __DATE__);
   printf("Welcome to %s-NEMU!\n", ANSI_FMT(str(__GUEST_ISA__), ANSI_FG_YELLOW ANSI_BG_RED));
   printf("For help, type \"help\"\n");
-  Log("Exercise: Please remove me in the source code and compile NEMU again.");
-  assert(0);
+  // Log("Exercise: Please remove me in the source code and compile NEMU again.");
+  // assert(0);
 }
 
 #ifndef CONFIG_TARGET_AM
@@ -54,7 +54,14 @@ static long load_img() {
 
   FILE *fp = fopen(img_file, "rb");
   Assert(fp, "Can not open '%s'", img_file);
+/*#include <stdio.h>
 
+       int fseek(FILE *stream, long offset, int whence);
+
+This call moves the file pointer to the end of the file (SEEK_END), 
+allowing the program to determine the size of the file by calling ftell(fp) afterward. 
+The return value from ftell will be the number of bytes from the start of the file to the current file pointer, 
+which is the total size of the file.*/
   fseek(fp, 0, SEEK_END);
   long size = ftell(fp);
 
@@ -62,6 +69,11 @@ static long load_img() {
 
   fseek(fp, 0, SEEK_SET);
   int ret = fread(guest_to_host(RESET_VECTOR), size, 1, fp);
+  /*
+  fread(guest_to_host(RESET_VECTOR), size, 1, fp); 将文件的内容读取到一个内存区域中。guest_to_host(RESET_VECTOR) 是目标缓冲区的地址，它通过某种映射函数转换得到。
+    size 是读取的字节数（文件的大小）。
+    1 表示读取一个块。
+    fp 是打开的文件指针。*/
   assert(ret == 1);
 
   fclose(fp);
@@ -75,9 +87,27 @@ static int parse_args(int argc, char *argv[]) {
     {"diff"     , required_argument, NULL, 'd'},
     {"port"     , required_argument, NULL, 'p'},
     {"help"     , no_argument      , NULL, 'h'},
-    {0          , 0                , NULL,  0 },
+    {0          , 0                , NULL,  0 }, // mark the end of stucture
   };
+/*
+getopt_long use the strcture below
+struct option {
+    const char *name;   // 长选项的名字，比如 "help"
+    int has_arg;        // 指定这个选项是否需要参数，取值可以是 no_argument, required_argument, optional_argument
+    int *flag;          // flag指针。如果非 NULL，则不返回val，而是将val存储在*flag中
+    int val;            // 当flag为 NULL 时，getopt_long 返回这个 val 作为该选项的标识符
+};
+
+如果你不关心短选项，想要通过变量来检查选项状态，则可以使用 flag，但这会牺牲短选项的支持。
+*/
+
   int o;
+/*"-bhl:d:p:" 表示程序支持的短选项：
+
+    -b：不需要参数。
+    -h：不需要参数。
+    -l, -d, -p 需要参数（冒号表示需要参数）。*/
+
   while ( (o = getopt_long(argc, argv, "-bhl:d:p:", table, NULL)) != -1) {
     switch (o) {
       case 'b': sdb_set_batch_mode(); break;
