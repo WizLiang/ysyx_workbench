@@ -44,17 +44,17 @@ module Sim_ALU(
     output reg zero
 );
 
-    reg flag;
+    //reg flag;
     wire [3:0] u_result;
 /* verilator lint_off LATCH */
     always@(*)begin
         case(func)
         3'b000:begin
-            flag = 1'b0;
+            //flag = 1'b0;
             result = u_result;
         end
         3'b001:begin
-            flag = 1'b1;
+            //flag = 1'b1;
             result = u_result;
         end
         3'b010:begin
@@ -94,7 +94,7 @@ module Sim_ALU(
     adder u_adder (
         .A(A),
         .B(B),
-        .c_in(flag),
+        .c_in(func[0]),
         .result(u_result),
         .zero(zero),
         .carry(carry),

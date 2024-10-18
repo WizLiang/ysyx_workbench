@@ -27,41 +27,6 @@
 
 // //assign seg0[7:0] = 8'b00000010;
 
-module ps_keyboard(clk,resetn,ps2_clk,ps2_data);
-    input clk,resetn,ps2_clk,ps2_data;
-
-    reg [9:0] buffer;        // ps2_data bits
-    reg [3:0] count;  // count ps2_data bits
-    reg [2:0] ps2_clk_sync;
-
-    always @(posedge clk) begin
-        ps2_clk_sync <=  {ps2_clk_sync[1:0],ps2_clk};
-    end
-
-    wire sampling = ps2_clk_sync[2] & ~ps2_clk_sync[1];
-
-    always @(posedge clk) begin
-        if (resetn == 0) begin // reset
-            count <= 0;
-        end
-        else begin
-            if (sampling) begin
-              if (count == 4'd10) begin
-                if ((buffer[0] == 0) &&  // start bit
-                    (ps2_data)       &&  // stop bit
-                    (^buffer[9:1])) begin      // odd  parity
-                    $display("receive %x", buffer[8:1]);
-                end
-                count <= 0;     // for next
-              end else begin
-                buffer[count] <= ps2_data;  // store ps2_data
-                count <= count + 3'b1;
-              end
-            end
-        end
-    end
-
-endmodule
 
 module top(
   input clk,
@@ -70,6 +35,11 @@ module top(
   //input [2:0] func,
   input ps2_clk,
   input ps2_data,
+  
+  // //ex6
+  // input [4:0] btn,
+
+  //output [2:0]func,
 
 
   output reg [7:0] seg5,
@@ -81,14 +51,6 @@ module top(
   output [15:0]led
 );
 
-
-  // ps_keyboard u_ps2_keyboard(
-  //   .clk(clk),
-  //   .resetn(rst_n),
-  //   .ps2_clk(ps2_clk),
-  //   .ps2_data(ps2_data)
-   
-  // );
 
   wire ready;
   wire [7:0] data;
@@ -206,7 +168,8 @@ assign seg0[0] = 1'b1;
   // output reg [7:0] seg1,
   // output reg [7:0] seg0
   // //output [15:0]led
-// wire [7:0] data_out;
+
+//  wire [7:0] data_out;
 // linear_feedback_shift_register u_lfsr(
 //   .clk(|(btn)),
 //   .rst_n(rst_n),
@@ -215,23 +178,25 @@ assign seg0[0] = 1'b1;
 
 // seven_seg_decoder u_seven_seg0(
 //   .digit(data_out[3:0]),
+//   .enable(1'b1),
 //   .segments(seg0[7:1])
 // );
 // assign seg0[0] = 1'b0;
 // seven_seg_decoder u_seven_seg1(
 //   .digit({data_out[7:4]}),
+//   .enable(1'b1),
 //   .segments(seg1[7:1])
 // );
 // assign seg1[0] = 1'b0;
 
 // light u_light(
 //     .clk(clk),
-//     .rst(rst),
+//     .rst(rst_n),
 //     .led(led)
 // );
 
 
-//exercise two
+// // exercise two
 // wire [2:0] u_digit;
 // encoder_83 u_encoder_83(
 //   .in(data_in),
@@ -241,13 +206,17 @@ assign seg0[0] = 1'b1;
 
 // seven_seg_decoder u_seven_seg_decoder(
 //   .digit({1'b0,u_digit}),
+//   .enable(1'b1),
 //   .segments(seg0[7:1])
 // );
 
 // assign seg0[0] = 1'b0;
+// assign led[3:1] = u_digit[2:0];
 
 
-//exercise three
+// // exercise three
+
+
 // Sim_ALU u_Sim_ALU(
 //   .A(data_in[3:0]),
 //   .B(data_in[7:4]),
@@ -258,6 +227,8 @@ assign seg0[0] = 1'b1;
 //   .carry(led[7]),
 //   .zero(led[8])
 // );
+
+
 
 
 

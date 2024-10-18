@@ -21,7 +21,7 @@
 
 module mux41_2bit (
     input clk,
-    input rst,
+    input rst_n,
     input [1:0] X0,X1,X2,X3,
     input [1:0] Y,
     output [7:0] seg0,

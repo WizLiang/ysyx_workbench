@@ -1,5 +1,7 @@
 TOPNAME = top
-#constain flie dir
+#TOPNAME = mux41_2bit
+#exercise 6 shift_reg BarrelShifter
+#constain file dir
 NXDC_FILES = constr/$(TOPNAME).nxdc
 INC_PATH ?=
 
