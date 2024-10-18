@@ -160,14 +160,14 @@ assign seg0[0] = 1'b1;
 
 
 // //exercise six
-  // input clk,
-  // input rst_n,
-  // //input [7:0] data_in,
-  // //input [2:0] func,
-  // input [4:0] btn,
-  // output reg [7:0] seg1,
-  // output reg [7:0] seg0
-  // //output [15:0]led
+//   // input clk,
+//   // input rst_n,
+//   // //input [7:0] data_in,
+//   // //input [2:0] func,
+//   // input [4:0] btn,
+//   // output reg [7:0] seg1,
+//   // output reg [7:0] seg0
+//   // //output [15:0]led
 
 //  wire [7:0] data_out;
 // linear_feedback_shift_register u_lfsr(
