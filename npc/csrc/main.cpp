@@ -28,9 +28,9 @@ static void single_cycle() {
 }
 
 static void reset(int n) {
-  dut.rst_n = 1;
-  while (n -- > 0) single_cycle();
   dut.rst_n = 0;
+  while (n -- > 0) single_cycle();
+  dut.rst_n = 1;
 }
 
 int main() {

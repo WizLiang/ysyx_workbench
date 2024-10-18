@@ -44,6 +44,7 @@ module ps2_keyboard(clk,clrn,ps2_clk,ps2_data,data,
                             overflow <= overflow | (r_ptr == (w_ptr + 3'b1));
                         end
                     count <= 0;     // for next
+                    $display("receive %x", buffer[8:1]);
                 end 
               else begin
                 buffer[count] <= ps2_data;  // store ps2_data

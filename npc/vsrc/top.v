@@ -27,6 +27,42 @@
 
 // //assign seg0[7:0] = 8'b00000010;
 
+module ps_keyboard(clk,resetn,ps2_clk,ps2_data);
+    input clk,resetn,ps2_clk,ps2_data;
+
+    reg [9:0] buffer;        // ps2_data bits
+    reg [3:0] count;  // count ps2_data bits
+    reg [2:0] ps2_clk_sync;
+
+    always @(posedge clk) begin
+        ps2_clk_sync <=  {ps2_clk_sync[1:0],ps2_clk};
+    end
+
+    wire sampling = ps2_clk_sync[2] & ~ps2_clk_sync[1];
+
+    always @(posedge clk) begin
+        if (resetn == 0) begin // reset
+            count <= 0;
+        end
+        else begin
+            if (sampling) begin
+              if (count == 4'd10) begin
+                if ((buffer[0] == 0) &&  // start bit
+                    (ps2_data)       &&  // stop bit
+                    (^buffer[9:1])) begin      // odd  parity
+                    $display("receive %x", buffer[8:1]);
+                end
+                count <= 0;     // for next
+              end else begin
+                buffer[count] <= ps2_data;  // store ps2_data
+                count <= count + 3'b1;
+              end
+            end
+        end
+    end
+
+endmodule
+
 module top(
   input clk,
   input rst_n,
@@ -44,6 +80,15 @@ module top(
   output reg [7:0] seg0,
   output [15:0]led
 );
+
+
+  // ps_keyboard u_ps2_keyboard(
+  //   .clk(clk),
+  //   .resetn(rst_n),
+  //   .ps2_clk(ps2_clk),
+  //   .ps2_data(ps2_data)
+   
+  // );
 
   wire ready;
   wire [7:0] data;
@@ -69,7 +114,7 @@ module top(
     .scancode(last_key),
     .ascii(ascii)
   );
-
+wire overflow;
   ps2_keyboard u_ps2_keyboard(
     .clk(clk),
     .clrn(rst_n),
@@ -78,7 +123,7 @@ module top(
     .data(data),
     .nextdata_n(nextdata_n),
     .ready(ready),
-    .overflow()
+    .overflow(overflow)
   );
 
 //led
@@ -88,7 +133,7 @@ assign led[2] = nextdata_n;
 
 assign led[3] = data_in[3];
 assign led[4] = ps2_data;
-assign led[5] = ps2_clk;
+assign led[5] = overflow;
  
 
 
@@ -147,6 +192,8 @@ seven_seg_decoder u_seven_seg_decoder0(
 );
 
 assign seg0[0] = 1'b1;
+
+
 
 
 
