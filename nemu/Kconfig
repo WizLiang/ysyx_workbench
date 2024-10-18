@@ -160,6 +160,15 @@ config DIFFTEST
     Enable differential testing with a reference design.
     Note that this will significantly reduce the performance of NEMU.
 
+
+config WATCHPOINT
+  bool "Enable watchpoint support"
+  default y
+  help
+    Enable support for watchpoints, allowing the program to monitor
+    specific memory locations for changes and break execution when they occur.
+    
+
 choice
   prompt "Reference design"
   default DIFFTEST_REF_SPIKE if ISA_riscv

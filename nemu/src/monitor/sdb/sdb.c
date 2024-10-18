@@ -62,6 +62,32 @@ make: *** [/home/wizard/ysyx-workbench/nemu/scripts/native.mk:38: run] Error 1
   //exit(0);
 }
 
+//watchpoint
+static int cmd_w(char *args) {
+  if (args == NULL) {
+    printf("Usage: w EXPR\n");
+    return 0;
+  }
+
+  new_wp(args);
+
+  return 0;
+}
+
+static int cmd_d(char *args) {
+  if (args == NULL) {
+    printf("Usage: d N\n");
+    return 0;
+  }
+
+  int n = atoi(args);  // 将字符串转换为整数
+  free_wp(n);          // 调用free_wp函数删除监视点
+
+  return 0;
+}
+
+
+
 static int cmd_help(char *args);
 
 static int cmd_si(char *args){
@@ -75,10 +101,17 @@ static int cmd_si(char *args){
 };
 
 static int cmd_info(char *args){
+  //illegal input check
+  if (args == NULL) {
+    printf("Usage: info r or info w \n");
+    return 0;
+  }
   if(!strcmp(args,"r")){isa_reg_display();}
   if (!strcmp(args, "w"))
   {
-    printf("Sorry! I haven't implemented this function so far.\n");
+    //printf("Sorry! I haven't implemented this function so far.\n");
+    int active_wp_count = print_all_wp();
+    printf("Total active watchpoints: %d\n", active_wp_count);
   }
   return 0;
 };
@@ -122,10 +155,10 @@ static int cmd_p(char *args) {
   }
 
   bool success = true;
-  sword_t result = expr(args, &success);
+  word_t result = expr(args, &success);
 
   if (success) {
-    printf("%d\n", result);
+    printf("%u\n", result);
   } else {
     printf("Invalid expression!\n");
   }
@@ -148,6 +181,8 @@ static struct {
   { "info", "Print the register state or monitor information", cmd_info},
   { "x", "Scan memory: x N EXPR", cmd_x },//note : this function haven't fully implemented yet.
   { "p", "Evaluate the expression EXPR and display the result", cmd_p },
+  { "w", "Set a watchpoint with expression EXPR", cmd_w },  
+  { "d", "Delete the watchpoint with number N", cmd_d },   
 };
 
 #define NR_CMD ARRLEN(cmd_table)

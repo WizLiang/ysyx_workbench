@@ -20,4 +20,9 @@
 
 sword_t expr(char *e, bool *success);
 
+//wp
+int print_all_wp();
+void new_wp(const char *EXPR);
+void free_wp(int NO);
+void check_watchpoints(void);
 #endif

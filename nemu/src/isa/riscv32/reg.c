@@ -25,10 +25,21 @@ const char *regs[] = {
 
 void isa_reg_display() {
   for(uint16_t i = 0; i <32 ; i++){
-    printf("%s\t\t0x%x\t\t%u\n",regs[i],gpr(i),gpr(i));
+    printf("%-5s\t\t0x%-10x\t\t%u\n",regs[i],gpr(i),gpr(i)); // use -5 (left justified,5 char width)
   }
 }
 
 word_t isa_reg_str2val(const char *s, bool *success) {
+  //  jump the $
+  if (s[0] == '$') {
+    s++;
+  }
+  for(uint16_t i = 0;i <32; i++){
+    if(!strcmp(s,regs[i])){
+      *(success) = true;
+      return gpr(i);
+    }
+  }
+
   return 0;
 }

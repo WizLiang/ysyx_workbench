@@ -19,10 +19,16 @@
  * Type 'man regex' for more information about POSIX regex functions.
  */
 #include <regex.h>
+#include <memory/paddr.h>
 
 enum {
   TK_NOTYPE = 256, TK_EQ,TK_DECIMAL,
-  TK_NEG,
+  TK_HEX,  // For hexadecimal numbers
+  TK_NEQ,   // For '!='
+  TK_AND,   // For '&&'
+  TK_NEG,   // For  negetive
+  TK_REG,  // for register names
+  TK_DEREF,  // pointer dereferencing
 
   /* TODO: Add more token types */
 
@@ -40,7 +46,13 @@ static struct rule {
    */
 
   {" +", TK_NOTYPE},    // spaces
+  //hexadecimal first
+  {"0x[0-9a-fA-F]+", TK_HEX},  // Match hexadecimal numbers starting with "0x"
   {"[0-9]+", TK_DECIMAL},     // decimal number
+
+  {"\\$[a-zA-Z0-9$]+", TK_REG},  // Match register names starting with "$"
+
+  
   {"\\+", '+'},               // add
   {"-", '-'},                 // minus
   {"\\*", '*'},               // multiple
@@ -48,7 +60,9 @@ static struct rule {
   {"\\(", '('},               // left branket
   {"\\)", ')'},               // right branket
 
-  {"==", TK_EQ},        // equal
+  {"==", TK_EQ},              // equal
+  {"!=", TK_NEQ},             // not equal
+  {"&&", TK_AND},             // logical and
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -114,23 +128,55 @@ static bool make_token(char *e) {
         switch (rules[i].token_type) {
           //only record
           //case '+': case '-' : case '*': case '/' : case '(' : case ')':
-          case '+':  case '*': case '/' : case '(' : case ')':
+          case '+': case '/' : case '(' : case ')':
           tokens[nr_token].type = rules[i].token_type;
           nr_token++;
           break;
+
           case '-':
+          // Check if it is a unary minus (negative) or binary subtraction
           if (nr_token == 0 || tokens[nr_token - 1].type == '(' || tokens[nr_token - 1].type == '+' ||
               tokens[nr_token - 1].type == '-'  || tokens[nr_token - 1].type == '*' ||
               tokens[nr_token - 1].type == TK_NEG || 
               tokens[nr_token - 1].type == '/'
                ) {
-              tokens[nr_token].type = TK_NEG;  // 单目负号
+              tokens[nr_token].type = TK_NEG;  // a unary minus (negative)
             } 
           else {
-            tokens[nr_token].type = '-';  // 二元减号
+            tokens[nr_token].type = '-';  // binary subtraction
           }
           nr_token++;
           break;
+
+          case '*':
+          if (nr_token == 0 || tokens[nr_token - 1].type == '(' ||
+          tokens[nr_token - 1].type == '+' || tokens[nr_token - 1].type == '-' ||
+          tokens[nr_token - 1].type == '*' || tokens[nr_token - 1].type == '/' ||
+          tokens[nr_token - 1].type == TK_EQ || tokens[nr_token - 1].type == TK_NEQ ||
+          tokens[nr_token - 1].type == TK_AND || tokens[nr_token - 1].type == TK_NEG) {
+          tokens[nr_token].type = TK_DEREF;  
+          } else {
+          tokens[nr_token].type = '*';  
+          }
+          nr_token++;
+          break;
+
+          case TK_EQ:  // Handling == operator
+          tokens[nr_token].type = TK_EQ;
+          nr_token++;
+          break;
+
+          case TK_NEQ:  // Handling != operator
+          tokens[nr_token].type = TK_NEQ;
+          nr_token++;
+          break;
+
+          case TK_AND:  // Handling && operator
+          tokens[nr_token].type = TK_AND;
+          nr_token++;
+          break;
+          
+          
 
           case TK_DECIMAL:
           int len;
@@ -142,10 +188,43 @@ static bool make_token(char *e) {
             printf("the number has been cut off!/n");
           }
           strncpy(tokens[nr_token].str, substr_start, len);
-          tokens[nr_token].str[len] = '\0';  // 确保字符串以 '\0' 结尾
+          tokens[nr_token].str[len] = '\0';  // Null-terminate the string
           tokens[nr_token].type = TK_DECIMAL;
           nr_token++;
 
+          break;
+
+          case TK_HEX:
+          // Copy the hexadecimal number string to the token array
+          int hex_len ;
+          if(substr_len < sizeof(tokens[nr_token].str) - 1){
+            hex_len = substr_len;
+          }
+          else{
+              hex_len = sizeof(tokens[nr_token].str) - 1;
+              printf("the hex number is too long!/n");
+          }
+          
+          strncpy(tokens[nr_token].str, substr_start, hex_len);
+          tokens[nr_token].str[hex_len] = '\0';  // Null-terminate the string
+          tokens[nr_token].type = TK_HEX;
+          nr_token++;
+          break;
+
+          case TK_REG:
+          // Copy the register name string to the token array
+          int reg_len;
+          if(substr_len < sizeof(tokens[nr_token].str) - 1){
+            reg_len = substr_len;
+          }
+          else {
+            printf("Error reg format!\n");
+            assert(0);
+          }
+          strncpy(tokens[nr_token].str, substr_start, reg_len);
+          tokens[nr_token].str[reg_len] = '\0';  // Null-terminate the string
+          tokens[nr_token].type = TK_REG;
+          nr_token++;
           break;
 
           //ignore
@@ -196,6 +275,7 @@ bool check_parentheses(int p, int q) {
 }
 
 // out of parentheses and * and +
+// comparison operators have lower precedence than arithmetic
 int find_main_operator(int p, int q) {
   int op = -1;
   int min_priority = 100;  
@@ -210,15 +290,19 @@ int find_main_operator(int p, int q) {
 
     if (balance == 0) {
       int priority = 0;
-      
-      if (tokens[i].type == '+' ||
+      if (tokens[i].type == TK_EQ || tokens[i].type == TK_NEQ) {
+      priority = 1;  
+      } else if (tokens[i].type == TK_AND) {
+      priority = 0;  // logical AND has the lowest precedence
+      } 
+      else if (tokens[i].type == '+' ||
         //the minus sign should be ensure as a binary operator.
        (tokens[i].type == '-' && i > p && tokens[i - 1].type != '(')) {
-        priority = 1; 
+        priority = 2; 
       } else if (tokens[i].type == '*' || tokens[i].type == '/') {
-        priority = 2;  
-      } else if (tokens[i].type == TK_NEG) {
-        priority = 3; 
+        priority = 3;  
+      } else if (tokens[i].type == TK_NEG || tokens[i].type == TK_DEREF) {
+        priority = 4; 
       }
 
       if (priority > 0 && priority <= min_priority) {//use <=   83*495   + 57  - 509 + 140   40773 40
@@ -251,6 +335,26 @@ sword_t eval(int p, int q) {
     printf("Bad expression!\n");
     assert(0);
   }
+    else if (tokens[p].type == TK_REG) {
+    //read reg
+    bool success = false;
+    word_t reg_val = isa_reg_str2val(tokens[p].str, &success);
+    if (!success) {
+      printf("Failed to get the value of register %s\n", tokens[p].str);
+      assert(0);
+    }
+    return reg_val;
+    }
+  else if (tokens[p].type == TK_NEG) {
+    //negetive
+    return -eval(p + 1, q);
+  }
+  else if (tokens[p].type == TK_DEREF) {
+    // dereferencing
+    word_t addr = eval(p + 1, q);  // Evaluate the address after '*'
+    word_t value = paddr_read(addr, sizeof(word_t));  // Read the value from memory
+    return value;
+  }
   else if (p == q) {
     /* Single token.
      * For now this token should be a number.
@@ -259,7 +363,12 @@ sword_t eval(int p, int q) {
     if (tokens[p].type == TK_DECIMAL) {
       return strtoul(tokens[p].str, NULL, 10);
       //return strtol(tokens[p].str, NULL, 10);
-    } else {
+    } 
+    else if (tokens[p].type == TK_HEX) {
+    // Convert the hexadecimal string to an unsigned integer
+    return strtoul(tokens[p].str, NULL, 16);
+    }
+    else {
       printf("Invalid token type!\n");
       assert(0);
     }
@@ -269,9 +378,6 @@ sword_t eval(int p, int q) {
      * If that is the case, just throw away the parentheses.
      */
     return eval(p + 1, q - 1);
-  }
-  else if (tokens[p].type == TK_NEG) {
-  return -eval(p + 1, q);
   }
 
   else {
@@ -295,6 +401,9 @@ sword_t eval(int p, int q) {
       case '-': return val1 - val2;
       case '*': return val1 * val2;
       case '/': return val1 / val2;
+      case TK_EQ: return val1 == val2;
+      case TK_NEQ: return val1 != val2;
+      case TK_AND: return val1 && val2;
       default: 
         printf("Unknown operator!\n");
         assert(0);
@@ -310,59 +419,11 @@ sword_t expr(char *e, bool *success) {
     *success = false;
     return 0;
   }
-
+  *success = true;
   /* TODO: Implement expression evaluation */
   return eval(0, nr_token - 1);  
 }
 
-// int find_main_operator(int l, int r) {
-//   int op = -1;
-//   int min_priority = 100;  // 假设没有优先级比 100 更低的操作符
-//   for (int i = l; i <= r; i++) {
-//     int priority = 0;
-//     switch (tokens[i].type) {
-//       case '+': case '-':
-//         priority = 1;
-//         break;
-//       case '*': case '/':
-//         priority = 2;
-//         break;
-//     }
-//     if (priority > 0 && priority < min_priority) {
-//       min_priority = priority;
-//       op = i;
-//     }
-//   }
-
-//   assert(op != -1);  // 确保在表达式中找到操作符
-//   return op;
-// }
-
-// /* Evaluate the expression between tokens[l] and tokens[r] */
-// word_t eval(int l, int r) {
-//   // 简单例子：支持数字和加减乘除
-//   if (l == r) {
-//     // 单个 token：如果是数字，则返回该数字
-//     if (tokens[l].type == TK_DECIMAL) {
-//       return strtoul(tokens[l].str, NULL, 10);
-//     }
-//   }
-
-//   // 查找优先级最低的运算符，进行递归求值
-//   int op = find_main_operator(l, r);
-//   word_t val1 = eval(l, op - 1);
-//   word_t val2 = eval(op + 1, r);
-
-//   switch (tokens[op].type) {
-//     case '+': return val1 + val2;
-//     case '-': return val1 - val2;
-//     case '*': return val1 * val2;
-//     case '/': return val1 / val2;
-//     default: assert(0);
-//   }
-
-//   return 0;
-// }
 
 
 
