@@ -12,15 +12,8 @@ Vtop::Vtop(VerilatedContext* _vcontextp__, const char* _vcname__)
     : VerilatedModel{*_vcontextp__}
     , vlSymsp{new Vtop__Syms(contextp(), _vcname__, this)}
     , clk{vlSymsp->TOP.clk}
-    , rst_n{vlSymsp->TOP.rst_n}
+    , rst{vlSymsp->TOP.rst}
     , data_in{vlSymsp->TOP.data_in}
-    , ps2_clk{vlSymsp->TOP.ps2_clk}
-    , ps2_data{vlSymsp->TOP.ps2_data}
-    , seg5{vlSymsp->TOP.seg5}
-    , seg4{vlSymsp->TOP.seg4}
-    , seg3{vlSymsp->TOP.seg3}
-    , seg2{vlSymsp->TOP.seg2}
-    , seg1{vlSymsp->TOP.seg1}
     , seg0{vlSymsp->TOP.seg0}
     , led{vlSymsp->TOP.led}
     , rootp{&(vlSymsp->TOP)}
