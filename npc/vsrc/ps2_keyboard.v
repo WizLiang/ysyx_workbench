@@ -32,7 +32,7 @@ module ps2_keyboard(clk,clrn,ps2_clk,ps2_data,data,
                     if(w_ptr==(r_ptr+1'b1)) //empty
                         ready <= 1'b0;
                 end
-            end
+            end 
             if (sampling) begin
                 if (count == 4'd10) begin
                     if ((buffer[0] == 0) &&  // start bit

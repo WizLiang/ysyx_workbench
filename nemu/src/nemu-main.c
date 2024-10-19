@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
 #else
   init_monitor(argc, argv);
 #endif
-  test_p();
+  //test_p();
   /* Start engine. */
   engine_start();
 
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 
 void test_p(void){
     
-  FILE *input_fp = fopen("./tools/gen-expr/input", "r");
+  FILE *input_fp = fopen("./tools/gen-expr/input3", "r");
 
   assert(input_fp != NULL);
 

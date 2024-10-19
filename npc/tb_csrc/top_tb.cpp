@@ -80,13 +80,13 @@ int main(int argc, char** argv) {
   //dut.nextdata_n = 1;
   single_cycle();
 
-  // 发送 'A' 键的释放扫描码
-  send_ps2_frame(0x1C);
-  single_cycle();
-  //dut.nextdata_n = 0;
-  single_cycle();
-  //dut.nextdata_n = 1;
-  single_cycle();
+  // // 发送 'A' 键的释放扫描码
+  // send_ps2_frame(0x1C);
+  // single_cycle();
+  // //dut.nextdata_n = 0;
+  // single_cycle();
+  // //dut.nextdata_n = 1;
+  // single_cycle();
 
   // 模拟按下 'S' 键（扫描码 1Bh）
   send_ps2_frame(0x1B);

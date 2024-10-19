@@ -47,4 +47,9 @@ $(clean-tools):
 clean-tools: $(clean-tools)
 clean-all: clean distclean clean-tools
 
+
+count:
+	#find /home/wizard/ysyx-workbench/nemu -name "*.c" -o -name "*.h" | xargs wc -
+	find /home/wizard/ysyx-workbench/nemu -name "*.c" -o -name "*.h" | xargs grep -v '^$$' | wc -l
+
 .PHONY: run gdb run-env clean-tools clean-all $(clean-tools)
