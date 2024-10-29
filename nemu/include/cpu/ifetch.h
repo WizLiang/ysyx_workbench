@@ -18,7 +18,7 @@
 #include <memory/vaddr.h>
 
 static inline uint32_t inst_fetch(vaddr_t *pc, int len) {
-  uint32_t inst = vaddr_ifetch(*pc, len);
+  uint32_t inst = vaddr_ifetch(*pc, len);//eturns the 32-bit integer stored at the memory
   (*pc) += len;
   return inst;
 }
