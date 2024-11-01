@@ -158,7 +158,7 @@ static int cmd_p(char *args) {
   word_t result = expr(args, &success);
 
   if (success) {
-    printf("%u\n", result);
+    printf("%u  in Hex:%x\n", result,result);
   } else {
     printf("Invalid expression!\n");
   }

@@ -166,7 +166,7 @@ void check_watchpoints() {
     }
     if (new_value != wp->last_value) {
       printf("Watchpoint %d triggered: %s\n", wp->NO, wp->expression);
-      printf("Old value = %u , New value = %u \n", wp->last_value, new_value);
+      printf("Old value = %x , New value = %x \n", wp->last_value, new_value);
       wp->last_value = new_value; //updata value
       triggered = true; 
     }
