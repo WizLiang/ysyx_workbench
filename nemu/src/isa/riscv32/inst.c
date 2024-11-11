@@ -22,6 +22,11 @@
 #define Mr vaddr_read
 #define Mw vaddr_write
 
+//instruction ring buf
+InstEntry iringbuf[IRINGBUF_SIZE];
+int iringbuf_index = 0;
+
+
 enum {
   TYPE_I, TYPE_U, TYPE_S, TYPE_J, TYPE_R, TYPE_B,
   TYPE_N, // none
@@ -195,7 +200,20 @@ static int decode_exec(Decode *s) {
   return 0;
 }
 
+
+
 int isa_exec_once(Decode *s) {
   s->isa.inst = inst_fetch(&s->snpc, 4);
+  #ifdef CONFIG_ITRACE
+  // Add the instruction to the iringbuf
+  iringbuf[iringbuf_index].pc = s->pc;            // 指令地址
+  iringbuf[iringbuf_index].inst = s->isa.inst;    // 指令编码
+  void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
+  disassemble(iringbuf[iringbuf_index].asm_str, sizeof(iringbuf[iringbuf_index].asm_str), 
+              s->pc, (uint8_t *)&s->isa.inst, 4); // 指令反汇编
+
+  // Update ring buffer index
+  iringbuf_index = (iringbuf_index + 1) % IRINGBUF_SIZE;
+#endif
   return decode_exec(s);
 }

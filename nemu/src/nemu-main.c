@@ -21,6 +21,7 @@ void am_init_monitor();
 void engine_start();
 int is_exit_status_bad();
 void test_p();
+void parse_elf_file();
 
 int main(int argc, char *argv[]) {
   /* Initialize the monitor. */
@@ -28,6 +29,12 @@ int main(int argc, char *argv[]) {
   am_init_monitor();
 #else
   init_monitor(argc, argv);
+  if(elf_file_path){
+    parse_elf_file(elf_file_path);
+  }
+  else{
+    printf("No ELF file specified!\n");
+  }
 #endif
   //test_p();
   /* Start engine. */

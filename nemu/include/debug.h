@@ -36,7 +36,52 @@
     } \
   } while (0)
 
-#define panic(format, ...) Assert(0, format, ## __VA_ARGS__)
+#define IRINGBUF_SIZE 16
+
+
+typedef struct {
+    uint32_t pc;
+    uint32_t inst;
+    char asm_str[32];
+} InstEntry;
+
+
+extern InstEntry iringbuf[IRINGBUF_SIZE];
+extern int iringbuf_index;
+
+static inline void print_iringbuf() {
+    // printf("Instruction trace leading to the error:\n");
+    // for (int i = 0; i < IRINGBUF_SIZE; i++) {
+    //     int index = (iringbuf_index + i) % IRINGBUF_SIZE;
+    //     if (index == iringbuf_index) {
+    //         printf("--> 0x%08x: %s    %08x\n", iringbuf[index].pc, iringbuf[index].asm_str, iringbuf[index].inst);
+    //     } else {
+    //         printf("    0x%08x: %s    %08x\n", iringbuf[index].pc, iringbuf[index].asm_str, iringbuf[index].inst);
+    //     }
+    // }
+    printf("Instruction Trace Leading to the Error:\n");
+    printf("    %-12s %-20s %-10s\n", "Address", "Instruction", "Encoding"); 
+    printf("    ---------------------------------------------\n");
+    iringbuf_index--;//the index will be added after writing
+    for (int i = 0; i < IRINGBUF_SIZE; i++) {
+        int index = (iringbuf_index + i) % IRINGBUF_SIZE;
+        if (index == iringbuf_index) {
+            printf("--> 0x%08x: %-20s 0x%08x\n", iringbuf[index].pc, iringbuf[index].asm_str, iringbuf[index].inst);
+        } else {
+            printf("    0x%08x: %-20s 0x%08x\n", iringbuf[index].pc, iringbuf[index].asm_str, iringbuf[index].inst);
+        }
+    }
+}
+
+
+
+#define panic(format, ...) \
+    do { \
+        print_iringbuf(); \
+        Assert(0, format, ## __VA_ARGS__); \
+    } while (0)
+
+//#define panic(format, ...) Assert(0, format, ## __VA_ARGS__)
 
 #define TODO() panic("please implement me")
 

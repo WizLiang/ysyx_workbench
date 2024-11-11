@@ -24,8 +24,10 @@ const char *regs[] = {
 };
 
 void isa_reg_display() {
+  printf("Register   Hex Value      Unsigned Value\n");
+  printf("-----------------------------------------\n");
   for(uint16_t i = 0; i <32 ; i++){
-    printf("%-5s\t\t0x%-10x\t\t%u\n",regs[i],gpr(i),gpr(i)); // use -5 (left justified,5 char width)
+    printf("%-5s\t   0x%-10x\t   %u\n",regs[i],gpr(i),gpr(i)); // use -5 (left justified,5 char width)
   }
 }
 

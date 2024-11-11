@@ -27,6 +27,16 @@
  */
 #define MAX_INST_TO_PRINT 10
 
+// #define IRINGBUF_SIZE 16
+// typedef struct {
+//     uint32_t pc;
+//     uint32_t inst;
+//     char asm_str[32];
+// } InstEntry;
+
+// InstEntry iringbuf[IRINGBUF_SIZE];
+// int iringbuf_index = 0;
+
 CPU_state cpu = {};
 uint64_t g_nr_guest_inst = 0;
 static uint64_t g_timer = 0; // unit: us
@@ -44,15 +54,16 @@ static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
 
 }
 
+
 static void exec_once(Decode *s, vaddr_t pc) {
   s->pc = pc;
   s->snpc = pc;
-  isa_exec_once(s);//update next pc (static or dynamic)
+  isa_exec_once(s);//update next pc (static and dynamic).fetch , decode , execute in decode
   cpu.pc = s->dnpc;
 #ifdef CONFIG_ITRACE
   char *p = s->logbuf;
   p += snprintf(p, sizeof(s->logbuf), FMT_WORD ":", s->pc); // pc addr 2 log buf
-  int ilen = s->snpc - s->pc;
+  int ilen = s->snpc - s->pc;//static npc add 4 in the inst fetch in riscv32
   int i;
   uint8_t *inst = (uint8_t *)&s->isa.inst;
 #ifdef CONFIG_ISA_x86
@@ -72,6 +83,15 @@ static void exec_once(Decode *s, vaddr_t pc) {
   void disassemble(char *str, int size, uint64_t pc, uint8_t *code, int nbyte);
   disassemble(p, s->logbuf + sizeof(s->logbuf) - p,
       MUXDEF(CONFIG_ISA_x86, s->snpc, s->pc), (uint8_t *)&s->isa.inst, ilen);
+
+  // // Add the instruction to the iringbuf
+  // iringbuf[iringbuf_index].pc = s->pc;
+  // iringbuf[iringbuf_index].inst = s->isa.inst; 
+  // strncpy(iringbuf[iringbuf_index].asm_str, p, sizeof(iringbuf[iringbuf_index].asm_str) - 1);
+
+  // // Update ring buffer index
+  // iringbuf_index = (iringbuf_index + 1) % IRINGBUF_SIZE;
+  
 #endif
 }
 

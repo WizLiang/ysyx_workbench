@@ -17,6 +17,10 @@
 #include <memory/paddr.h>
 #include <device/mmio.h>
 #include <isa.h>
+//#include <stdio.h>
+
+FILE *mtrace_file = NULL;
+
 
 #if   defined(CONFIG_PMEM_MALLOC)
 static uint8_t *pmem = NULL;
@@ -54,6 +58,17 @@ Tell the compiler that the condition is likely to return 'true',
 so that it can optimize branch prediction for better performance.
 */
 word_t paddr_read(paddr_t addr, int len) {
+  #ifdef CONFIG_MTRACE
+    if (addr >= MTRACE_START && addr <= MTRACE_END) {
+        FILE *mtrace_file = fopen("mtrace.log", "a");  // 追加模式打开文件
+        if (mtrace_file) {
+            fprintf(mtrace_file, "READ  Address: 0x%08lx  Length: %d\n", addr, len);
+            fclose(mtrace_file);  // 关闭文件
+        } else {
+            perror("Failed to open mtrace log file");
+        }
+    }
+  #endif
   if (likely(in_pmem(addr))) return pmem_read(addr, len);
   IFDEF(CONFIG_DEVICE, return mmio_read(addr, len));
   out_of_bound(addr);
@@ -61,6 +76,17 @@ word_t paddr_read(paddr_t addr, int len) {
 }
 
 void paddr_write(paddr_t addr, int len, word_t data) {
+  #ifdef CONFIG_MTRACE
+    if (addr >= MTRACE_START && addr <= MTRACE_END) {
+        FILE *mtrace_file = fopen("mtrace.log", "a");  // 追加模式打开文件
+        if (mtrace_file) {
+            fprintf(mtrace_file, "WRITE Address: 0x%08lx  Data: 0x%08lx  Length: %d\n", addr, data, len);
+            fclose(mtrace_file);  // 关闭文件
+        } else {
+            perror("Failed to open mtrace log file");
+        }
+    }
+  #endif
   if (likely(in_pmem(addr))) { pmem_write(addr, len, data); return; }
   IFDEF(CONFIG_DEVICE, mmio_write(addr, len, data); return);
   out_of_bound(addr);
