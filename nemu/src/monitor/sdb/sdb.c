@@ -42,6 +42,15 @@ static char* rl_gets() {
 
   return line_read;
 }
+void parse_elf_file();
+void test_find_function_by_pc();
+void ftrace_on();
+
+static int cmd_e(char *args){
+  ftrace_on();
+  parse_elf_file(args);
+  return 0;
+}
 
 static int cmd_c(char *args) {
   cpu_exec(-1);
@@ -165,6 +174,13 @@ static int cmd_p(char *args) {
 
   return 0;
 }
+//test function
+static int cmd_t(char *args){
+  // uint32_t test_pc = 0x80000010; // test pc
+  // test_find_function_by_pc(test_pc);
+  printf("Nothing to test!\n");
+  return 0;
+}
 
 
 static struct {
@@ -183,6 +199,8 @@ static struct {
   { "p", "Evaluate the expression EXPR and display the result", cmd_p },
   { "w", "Set a watchpoint with expression EXPR", cmd_w },  
   { "d", "Delete the watchpoint with number N", cmd_d },   
+  { "e", "ELF file reading", cmd_e },
+  { "t", "Test", cmd_t },      
 };
 
 #define NR_CMD ARRLEN(cmd_table)

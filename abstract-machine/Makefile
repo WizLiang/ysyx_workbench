@@ -13,6 +13,8 @@ ifeq ($(MAKECMDGOALS),)
   .DEFAULT_GOAL = image
 endif
 
+ARCH ?= riscv32
+
 ### Override checks when `make clean/clean-all/html`
 ifeq ($(findstring $(MAKECMDGOALS),clean|clean-all|html),)
 
@@ -25,7 +27,12 @@ ifeq ($(wildcard $(AM_HOME)/am/include/am.h),)
 endif
 
 ### Check: environment variable `$ARCH` must be in the supported list
+#$(notdir names...)
+#	Extracts all but the directory-part of each file name in names. 
+#$(basename name...)
+#	Extracts all but the suffix of each file name in names
 ARCHS = $(basename $(notdir $(shell ls $(AM_HOME)/scripts/*.mk)))
+#$filter(pattern ...,txt)
 ifeq ($(filter $(ARCHS), $(ARCH)), )
   $(error Expected $$ARCH in {$(ARCHS)}, Got "$(ARCH)")
 endif
@@ -62,6 +69,7 @@ LINKAGE   = $(OBJS) \
   $(addsuffix -$(ARCH).a, $(join \
     $(addsuffix /build/, $(addprefix $(AM_HOME)/, $(LIBS))), \
     $(LIBS) ))
+#For example, ‘$(join a b,.c .o)’ produces ‘a.c b.o’.
 
 ## 3. General Compilation Flags
 

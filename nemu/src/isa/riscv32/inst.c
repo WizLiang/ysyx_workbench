@@ -26,12 +26,50 @@
 InstEntry iringbuf[IRINGBUF_SIZE];
 int iringbuf_index = 0;
 
+char *find_function_by_pc();
 
 enum {
   TYPE_I, TYPE_U, TYPE_S, TYPE_J, TYPE_R, TYPE_B,
   TYPE_N, // none
 };
 
+// ftrace flag
+int is_ftrace_on = 0;
+void ftrace_on(void){
+  is_ftrace_on = 1;
+}
+
+// ftrace stack
+#define MAX_CALL_DEPTH 128
+
+typedef struct {
+    const char *func_name;  // 当前函数名
+    uint32_t return_addr;   // 返回地址
+} CallStack;
+
+static CallStack call_stack[MAX_CALL_DEPTH];
+static int call_depth = 0;
+
+void push_call(const char *func_name, uint32_t return_addr) {
+    if (call_depth >= MAX_CALL_DEPTH) {
+        fprintf(stderr, "Call stack overflow\n");
+        return;
+    }
+    call_stack[call_depth].func_name = func_name;
+    call_stack[call_depth].return_addr = return_addr;
+    call_depth++;
+}
+
+void pop_call(uint32_t pc) {
+    if (call_depth == 0) {
+        printf("0x%x: ret [unknown]\n", pc);
+        return;
+    }
+
+    call_depth--;
+    for (int i = 0; i < call_depth; i++) printf("  ");
+    printf("0x%x: ret [%s]\n", pc, call_stack[call_depth].func_name);
+}
 
 
 // Function to get the upper 32 bits of the product of two signed 32-bit integers
@@ -174,9 +212,37 @@ static int decode_exec(Decode *s) {
 
   INSTPAT("??????? ????? ????? ??? ????? 00101 11", auipc  , U, R(rd) = s->pc + imm);
   INSTPAT("??????? ????? ????? 100 ????? 00000 11", lbu    , I, R(rd) = Mr(src1 + imm, 1));
-  
-  INSTPAT("??????? ????? ????? ??? ????? 11011 11", jal    , J,  R(rd) = s->pc + 4; s->dnpc = s->pc + imm;);
-  INSTPAT("??????? ????? ????? 000 ????? 11001 11", jalr   , I,  R(rd) = s->pc + 4; s->dnpc = src1 + imm;);
+
+  //ftrace relevant inst  
+  INSTPAT("0000000 00000 00001 000 00000 11001 11", ret, I, {
+    R(rd) = s->pc + 4; s->dnpc = R(1);  
+    if(is_ftrace_on)pop_call(s->pc);
+  });
+  INSTPAT("??????? ????? ????? ??? ????? 11011 11", jal    , J,  R(rd) = s->pc + 4; s->dnpc = s->pc + imm;
+    if(is_ftrace_on){
+      const char *func_name = find_function_by_pc(s->dnpc);
+      for (int i = 0; i < call_depth; i++) printf("  ");  // 调用层次的缩进
+      if (func_name) {
+        printf("0x%x: call [%s@0x%x]\n", s->pc, func_name, s->dnpc);
+        push_call(func_name, s->pc + 4);
+      } else {
+        printf("0x%x: call [unknown@0x%x]\n", s->pc, s->dnpc);
+      }
+    }
+    );
+  INSTPAT("??????? ????? ????? 000 ????? 11001 11", jalr   , I,  R(rd) = s->pc + 4; s->dnpc = src1 + imm;
+    // 使用 find_function_by_pc 获取目标函数名
+    if(is_ftrace_on){
+      const char *func_name = find_function_by_pc(s->dnpc);
+      for (int i = 0; i < call_depth; i++) printf("  ");  // 调用层次的缩进
+      if (func_name) {
+        printf("0x%x: call [%s@0x%x]\n", s->pc, func_name, s->dnpc);
+        push_call(func_name, s->pc + 4);
+      } else {
+        printf("0x%x: call [unknown@0x%x]\n", s->pc, s->dnpc);
+      }
+    }
+    );
 
   //load & store
   INSTPAT("??????? ????? ????? 000 ????? 01000 11", sb     , S, Mw(src1 + imm, 1, src2));

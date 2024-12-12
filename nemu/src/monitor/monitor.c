@@ -15,7 +15,7 @@
 
 #include <isa.h>
 #include <memory/paddr.h>
-#include <common.h>
+//#include <common.h>
 
 void init_rand();
 void init_log(const char *log_file);
@@ -43,11 +43,14 @@ static void welcome() {
 #include <getopt.h>
 
 void sdb_set_batch_mode();
+void ftrace_on();
+void parse_elf_file();
 
 static char *log_file = NULL;
 static char *diff_so_file = NULL;
 static char *img_file = NULL;
 static int difftest_port = 1234;
+char *elf_file_path = NULL;
 
 static long load_img() {
   if (img_file == NULL) {
@@ -89,7 +92,7 @@ static int parse_args(int argc, char *argv[]) {
     {"log"      , required_argument, NULL, 'l'},
     {"diff"     , required_argument, NULL, 'd'},
     {"port"     , required_argument, NULL, 'p'},
-    {"elf"      , required_argument, NULL, 'e'}, 
+    //{"elf"      , required_argument, NULL, 'e'}, 
     {"help"     , no_argument      , NULL, 'h'},
     {0          , 0                , NULL,  0 }, // mark the end of stucture
   };
@@ -118,14 +121,15 @@ struct option {
       case 'p': sscanf(optarg, "%d", &difftest_port); break;
       case 'l': log_file = optarg; break;
       case 'd': diff_so_file = optarg; break;
-      case 'e': elf_file_path = optarg; break; 
-      case 1: img_file = optarg; return 0;
+      case 'f': ftrace_on();elf_file_path = optarg;parse_elf_file(elf_file_path); break; 
+      case 1: img_file = optarg; return 0;//Trigger when the arguement not staet at '-' or '--' 
       default:
         printf("Usage: %s [OPTION...] IMAGE [args]\n\n", argv[0]);
         printf("\t-b,--batch              run with batch mode\n");
         printf("\t-l,--log=FILE           output log to FILE\n");
         printf("\t-d,--diff=REF_SO        run DiffTest with reference REF_SO\n");
         printf("\t-p,--port=PORT          run DiffTest with port PORT\n");
+        printf("\t-f,--ftrace             parse ELF file and enable ftrace\n");
         printf("\n");
         exit(0);
     }
