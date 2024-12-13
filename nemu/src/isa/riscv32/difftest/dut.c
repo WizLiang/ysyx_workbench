@@ -18,7 +18,20 @@
 #include "../local-include/reg.h"
 
 bool isa_difftest_checkregs(CPU_state *ref_r, vaddr_t pc) {
-  return false;
+  //bool flag = 0;
+  for (int i = 0; i < 32; i++){
+    //flag = (ref_r->gpr[i] == cpu.gpr[i]) ? true :false;//error only save the last result
+    if(ref_r->gpr[i] != cpu.gpr[i]){
+    printf("Mismatch in GPR[%d]: expected 0x%lx, got 0x%lx at PC 0x%lx\n", i, ref_r->gpr[i], cpu.gpr[i], pc);
+    return false;
+    }
+  }
+  //flag = (ref_r->pc == cpu.pc) ? true :false;
+  if(ref_r->pc != cpu.pc){
+    printf("Mismatch in PC: expected 0x%lx, got 0x%lx\n", ref_r->pc, cpu.pc);
+    return false;
+  }
+  return true;
 }
 
 void isa_difftest_attach() {
