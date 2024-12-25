@@ -19,6 +19,10 @@
 #include <isa.h>
 //#include <stdio.h>
 
+#define MTRACE_START 0x80000000
+#define MTRACE_END 0x8FFFFFFF
+
+
 FILE *mtrace_file = NULL;
 
 
@@ -62,7 +66,7 @@ word_t paddr_read(paddr_t addr, int len) {
     if (addr >= MTRACE_START && addr <= MTRACE_END) {
         FILE *mtrace_file = fopen("mtrace.log", "a");  // 追加模式打开文件
         if (mtrace_file) {
-            fprintf(mtrace_file, "READ  Address: 0x%08lx  Length: %d\n", addr, len);
+            fprintf(mtrace_file, "READ  Address: 0x%08x  Length: %d\n", addr, len);
             fclose(mtrace_file);  // 关闭文件
         } else {
             perror("Failed to open mtrace log file");
@@ -80,7 +84,7 @@ void paddr_write(paddr_t addr, int len, word_t data) {
     if (addr >= MTRACE_START && addr <= MTRACE_END) {
         FILE *mtrace_file = fopen("mtrace.log", "a");  // 追加模式打开文件
         if (mtrace_file) {
-            fprintf(mtrace_file, "WRITE Address: 0x%08lx  Data: 0x%08lx  Length: %d\n", addr, data, len);
+            fprintf(mtrace_file, "WRITE Address: 0x%08x  Data: 0x%08x  Length: %d\n", addr, data, len);
             fclose(mtrace_file);  // 关闭文件
         } else {
             perror("Failed to open mtrace log file");

@@ -34,7 +34,7 @@ enum {
 };
 
 // ftrace flag
-int is_ftrace_on = 0;
+int is_ftrace_on = 1;
 void ftrace_on(void){
   is_ftrace_on = 1;
 }
