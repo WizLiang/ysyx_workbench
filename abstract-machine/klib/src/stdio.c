@@ -7,14 +7,17 @@
 #if !defined(__ISA_NATIVE__) || defined(__NATIVE_USE_KLIB__)
 
 int printf(const char *fmt, ...) {
-  // char buffer[1024];  // 临时缓冲区
-  // va_list ap;
-  // va_start(ap, fmt);
-  // int result = vsnprintf(buffer, sizeof(buffer), fmt, ap);
-  // va_end(ap);
-  // fputs(buffer, stdout);  // 将缓冲区输出到标准输出
-  // return result;
-  panic("Not implemented");
+  char buffer[1024];  // 临时缓冲区
+  va_list ap;
+  va_start(ap, fmt);
+  int result = vsnprintf(buffer, sizeof(buffer), fmt, ap);
+  va_end(ap);
+  for( int i = 0;i < strlen(buffer);i++){
+    putch(buffer[i]);
+  }
+  //fputs(buffer, stdout);  // 将缓冲区输出到标准输出
+  return result;
+  //panic("Not implemented");
 }
 
 int vsprintf(char *out, const char *fmt, va_list ap) {
@@ -62,37 +65,106 @@ static int int_to_str(int value, char *str, size_t max_len) {
 }
 
 
+// int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
+//   size_t pos = 0;  // large of out(-1)
+
+//   while (*fmt) {
+//   if (*fmt == '%') {
+//     fmt++;  //jump and fetch the following token
+//     if (*fmt == 'd') {
+//       int value = va_arg(ap, int);  // 提取整数参数
+//       char buffer[20];
+//       //int len = snprintf(buffer, sizeof(buffer), "%d", value);  // 将整数转为字符串
+//       int len = int_to_str(value, buffer, sizeof(buffer));
+//       for (int i = 0; i < len && pos < n - 1; i++) {
+//       out[pos++] = buffer[i];
+//       }
+//     } else if (*fmt == 's') {
+//       const char *str = va_arg(ap, const char *);  // 提取字符串参数
+//       while (*str && pos < n - 1) {
+//         out[pos++] = *str++;
+//       }
+//     }
+//     // add more here
+//   } else {
+//   if (pos < n - 1) {
+//     out[pos++] = *fmt;
+//     }
+//   }
+//   fmt++;
+//   }
+//   out[pos] = '\0';  // 添加终止符
+//   return pos;
+//   //panic("Not implemented");
+// }
+
 int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
-  size_t pos = 0;  // large of out(-1)
+    size_t pos = 0;  // Position in the output string
 
-  while (*fmt) {
-  if (*fmt == '%') {
-    fmt++;  //jump and fetch the following token
-    if (*fmt == 'd') {
-      int value = va_arg(ap, int);  // 提取整数参数
-      char buffer[20];
-      //int len = snprintf(buffer, sizeof(buffer), "%d", value);  // 将整数转为字符串
-      int len = int_to_str(value, buffer, sizeof(buffer));
-      for (int i = 0; i < len && pos < n - 1; i++) {
-      out[pos++] = buffer[i];
-      }
-    } else if (*fmt == 's') {
-      const char *str = va_arg(ap, const char *);  // 提取字符串参数
-      while (*str && pos < n - 1) {
-        out[pos++] = *str++;
-      }
+    while (*fmt) {
+        if (*fmt == '%') {
+            fmt++;  // Jump and fetch the following token
+
+            // Initialize padding width and zero flag
+            int width = 0;
+            int zero_padding = 0;
+
+            // Check for zero padding
+            if (*fmt == '0') {
+                zero_padding = 1;
+                fmt++;
+            }
+
+            // Check for width specifier (e.g., 2 in %02d)
+            if (*fmt >= '1' && *fmt <= '9') {
+                width = *fmt - '0';
+                fmt++;
+                while (*fmt >= '0' && *fmt <= '9') {
+                    width = width * 10 + (*fmt - '0');
+                    fmt++;
+                }
+            }
+
+            if (*fmt == 'd') {
+                int value = va_arg(ap, int);  // Extract the integer argument
+                char buffer[20];
+
+                int len = int_to_str(value, buffer, sizeof(buffer));
+                int padding = (width > len) ? width - len : 0;
+
+                // If zero padding is specified, fill with '0'
+                if (zero_padding) {
+                    for (int i = 0; i < padding && pos < n - 1; i++) {
+                        out[pos++] = '0';
+                    }
+                }
+
+                // Copy the integer string
+                for (int i = 0; i < len && pos < n - 1; i++) {
+                    out[pos++] = buffer[i];
+                }
+
+                // // Add extra padding if needed
+                // for (int i = 0; i < padding && pos < n - 1; i++) {
+                //     out[pos++] = ' ';
+                // }
+
+            } else if (*fmt == 's') {
+                const char *str = va_arg(ap, const char *);  // Extract the string argument
+                while (*str && pos < n - 1) {
+                    out[pos++] = *str++;
+                }
+            }
+            // Add more format specifiers here if needed
+        } else {
+            if (pos < n - 1) {
+                out[pos++] = *fmt;
+            }
+        }
+        fmt++;
     }
-    // add more here
-  } else {
-  if (pos < n - 1) {
-    out[pos++] = *fmt;
-    }
-  }
-  fmt++;
-  }
-  out[pos] = '\0';  // 添加终止符
-  return pos;
-  //panic("Not implemented");
+
+    out[pos] = '\0';  // Add the null terminator
+    return pos;
 }
-
 #endif
