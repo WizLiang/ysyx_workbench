@@ -28,18 +28,50 @@ int atoi(const char* nptr) {
   }
   return x;
 }
+#if !(defined(__ISA_NATIVE__) && defined(__NATIVE_USE_KLIB__))
+extern Area heap;
+
+static uintptr_t current_addr = 0;
+
+// static void malloc_init() {
+//   if (current_addr == 0) {
+//     current_addr = (uintptr_t)heap.start;
+//   }
+// }
 
 void *malloc(size_t size) {
+  /*The malloc() function allocates size bytes and returns a pointer to the allocated memory.  
+  The memory is not initialized.  If size is 0, then malloc() returns either NULL, or a unique pointer
+  value that can later be successfully passed to free().
+*/
   // On native, malloc() will be called during initializaion of C runtime.
   // Therefore do not call panic() here, else it will yield a dead recursion:
   //   panic() -> putchar() -> (glibc) -> malloc() -> panic()
-#if !(defined(__ISA_NATIVE__) && defined(__NATIVE_USE_KLIB__))
-  panic("Not implemented");
-#endif
-  return NULL;
+//#if !(defined(__ISA_NATIVE__) && defined(__NATIVE_USE_KLIB__))
+
+  if(size == 0) return NULL;
+  if (current_addr + size > (uintptr_t)heap.end) {
+    return NULL; // heap may be full
+  }
+  if (current_addr == 0) {
+    current_addr = (uintptr_t)heap.start;
+  }
+  void *allocated_addr = (void*)current_addr;
+
+  // 对齐到 4 字节边界（根据需要调整）
+  size = (size + 3) & ~0x3;
+
+  current_addr += size;
+
+  return allocated_addr;
+
+  //panic("Not implemented");
+//#endif
+  // malloc_init();
+  // return NULL;
 }
 
 void free(void *ptr) {
 }
-
+#endif
 #endif

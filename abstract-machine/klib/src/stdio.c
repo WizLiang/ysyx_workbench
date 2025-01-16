@@ -4,10 +4,11 @@
 #include <stdarg.h>
 #include <unistd.h> 
 
+//#if !defined(__ISA_NATIVE__) && defined(__NATIVE_USE_KLIB__)
 #if !defined(__ISA_NATIVE__) || defined(__NATIVE_USE_KLIB__)
 
 int printf(const char *fmt, ...) {
-  char buffer[1024];  // 临时缓冲区
+  char buffer[4096];  // 临时缓冲区
   va_list ap;
   va_start(ap, fmt);
   int result = vsnprintf(buffer, sizeof(buffer), fmt, ap);
@@ -144,17 +145,18 @@ int vsnprintf(char *out, size_t n, const char *fmt, va_list ap) {
                     out[pos++] = buffer[i];
                 }
 
-                // // Add extra padding if needed
-                // for (int i = 0; i < padding && pos < n - 1; i++) {
-                //     out[pos++] = ' ';
-                // }
-
             } else if (*fmt == 's') {
                 const char *str = va_arg(ap, const char *);  // Extract the string argument
                 while (*str && pos < n - 1) {
                     out[pos++] = *str++;
                 }
+            } else if (*fmt == 'c') {
+                char ch = (char) va_arg(ap, int);  // Extract the char argument
+                if (pos < n - 1) {
+                    out[pos++] = ch;  // Copy the character to the output buffer
+                }
             }
+            
             // Add more format specifiers here if needed
         } else {
             if (pos < n - 1) {
