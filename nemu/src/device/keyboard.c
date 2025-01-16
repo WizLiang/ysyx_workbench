@@ -22,6 +22,7 @@
 #include <SDL2/SDL.h>
 
 // Note that this is not the standard
+//macro funtion: The parametre f will be  applied to each KEY 
 #define NEMU_KEYS(f) \
   f(ESCAPE) f(F1) f(F2) f(F3) f(F4) f(F5) f(F6) f(F7) f(F8) f(F9) f(F10) f(F11) f(F12) \
 f(GRAVE) f(1) f(2) f(3) f(4) f(5) f(6) f(7) f(8) f(9) f(0) f(MINUS) f(EQUALS) f(BACKSPACE) \
@@ -38,6 +39,7 @@ enum {
   MAP(NEMU_KEYS, NEMU_KEY_NAME)
 };
 
+//e.g keymap[SDL_SCANCODE_F1] = NEMU_KEY_F1;
 #define SDL_KEYMAP(k) keymap[SDL_SCANCODE_ ## k] = NEMU_KEY_ ## k;
 static uint32_t keymap[256] = {};
 
