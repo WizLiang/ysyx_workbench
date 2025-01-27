@@ -256,10 +256,42 @@ static int decode_exec(Decode *s) {
   INSTPAT("??????? ????? ????? 010 ????? 00000 11", lw     , I, R(rd) = Mr(src1 + imm, 4));
 
 
+  //CSR
+  //INSTPAT("??????? ????? ????? 001 ????? 11100 11", csrrw , N, );
+  INSTPAT("??????? ????? ????? 001 ????? 11100 11", csrrw , I, {
+  int csr_index = imm;
+  word_t old_val = csr_read(csr_index);
+  if (rd != 0) {
+    R(rd) = old_val;
+  }
+  csr_write(csr_index, src1); // src1 == R(rs1)
+  });
+  // CSRRS (Atomic Read and Set Bits)
+  INSTPAT("??????? ????? ????? 010 ????? 11100 11", csrrs , I, {
+  int csr_index = imm;
+  word_t old_val = csr_read(csr_index);
+
+  // 若 rd != x0, 将 old_val 写入 rd
+  if (rd != 0) {
+    R(rd) = old_val;
+  }
+
+  // 如果 rs1 != x0, 则需要修改 CSR (old_val | src1)
+  // 其中 src1 == R(rs1)
+  int rs1_idx = BITS(s->isa.inst, 19, 15);  
+  if (rs1_idx != 0) {
+    word_t mask = src1; 
+    word_t new_val = old_val | mask;
+    csr_write(csr_index, new_val);
+  }
+});
 
 
-
+  //Trap-Return Instructions
+  INSTPAT("0000000 00000 00000 000 00000 11100 11", ecall  , N, s->dnpc = isa_raise_intr(9, s->pc)); //ecall 在用户模式下是 cause = 8，超级模式 cause = 9，机器模式 cause = 11 等等
   INSTPAT("0000000 00001 00000 000 00000 11100 11", ebreak , N, NEMUTRAP(s->pc, R(10))); // R(10) is $a0
+  INSTPAT("0011000 00010 00000 000 00000 11100 11",  mret  , N, s->dnpc = cpu.csrs.mepc;); //jump to mpec,ignored to set MPRV=0
+
   INSTPAT("??????? ????? ????? ??? ????? ????? ??", inv    , N, INV(s->pc));
   INSTPAT_END();
 

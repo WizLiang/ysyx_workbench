@@ -15,12 +15,43 @@
 
 #include <isa.h>
 
+#ifdef CONFIG_ETRACE
+// 定义一个环形缓冲区或数组来记录异常日志
+#define ETRACE_BUF_SIZE 128
+static struct {
+  uint32_t epc;
+  uint32_t cause;
+} etrace_buf[ETRACE_BUF_SIZE];
+
+static int etrace_index = 0;
+
+static void etrace_record(uint32_t epc, uint32_t cause) {
+  etrace_buf[etrace_index].epc = epc;
+  etrace_buf[etrace_index].cause = cause;
+  //add more there
+  etrace_index = (etrace_index + 1) % ETRACE_BUF_SIZE;
+}
+
+void print_etrace(void){
+  for (int i = 0; i < ETRACE_BUF_SIZE; i++) {
+  printf("[ETRACE] cause = %d, epc = 0x%08x\n", 
+         etrace_buf[i].cause, etrace_buf[i].epc);
+}
+}
+#endif
+
 word_t isa_raise_intr(word_t NO, vaddr_t epc) {
   /* TODO: Trigger an interrupt/exception with ``NO''.
    * Then return the address of the interrupt/exception vector.
    */
-
-  return 0;
+  //cpu.csrs.mstatus = 0x1800;
+  cpu.csrs.mcause = NO;
+  cpu.csrs.mepc = epc;
+  #ifdef CONFIG_ETRACE
+  // 在捕获异常时，记录一条 etrace 信息
+  etrace_record(epc, NO);
+  #endif
+  return cpu.csrs.mtvec;
 }
 
 word_t isa_query_intr() {

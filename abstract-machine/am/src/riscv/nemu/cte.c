@@ -7,9 +7,19 @@ static Context* (*user_handler)(Event, Context*) = NULL;
 Context* __am_irq_handle(Context *c) {
   if (user_handler) {
     Event ev = {0};
+    // switch (c->mcause) {
+    //   default: ev.event = EVENT_ERROR; break;
+    // }
     switch (c->mcause) {
-      default: ev.event = EVENT_ERROR; break;
-    }
+    case 8:  // U-mode ecall
+    case 9:  // S-mode ecall
+    case 11: // M-mode ecall
+      ev.event = EVENT_YIELD; 
+      break;
+    default:
+      ev.event = EVENT_ERROR; 
+    break;
+}
 
     c = user_handler(ev, c);
     assert(c != NULL);
@@ -19,7 +29,9 @@ Context* __am_irq_handle(Context *c) {
 }
 
 extern void __am_asm_trap(void);
-
+/*
+handler is the pointer of function
+*/
 bool cte_init(Context*(*handler)(Event, Context*)) {
   // initialize exception entry
   asm volatile("csrw mtvec, %0" : : "r"(__am_asm_trap));

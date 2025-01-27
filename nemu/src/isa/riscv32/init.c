@@ -26,6 +26,14 @@ static const uint32_t img [] = {
   0xdeadbeef,  // some data
 };
 
+
+void init_csr() {
+  cpu.csrs.mstatus = 0x1800;// for the diff test
+  cpu.csrs.mepc    = 0x0;
+  cpu.csrs.mcause  = 0x0;
+  cpu.csrs.mtvec   = 0x0;
+}
+
 static void restart() {
   /* Set the initial program counter. */
   cpu.pc = RESET_VECTOR;
@@ -37,7 +45,7 @@ static void restart() {
 void init_isa() {
   /* Load built-in image. */
   memcpy(guest_to_host(RESET_VECTOR), img, sizeof(img));
-
   /* Initialize this virtual computer system. */
   restart();
+  init_csr();
 }

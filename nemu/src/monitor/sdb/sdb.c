@@ -46,9 +46,23 @@ void parse_elf_file();
 void test_find_function_by_pc();
 void ftrace_on();
 
-static int cmd_e(char *args){
+#ifdef CONFIG_ETRACE
+void print_etrace();
+#endif
+
+
+static int cmd_E(char *args){
   ftrace_on();
   parse_elf_file(args);
+  return 0;
+}
+
+static int cmd_e(char *args){
+  #ifdef CONFIG_ETRACE
+  print_etrace();
+  #else
+  printf("Please turn on etrace\n");
+  #endif
   return 0;
 }
 
@@ -199,7 +213,8 @@ static struct {
   { "p", "Evaluate the expression EXPR and display the result", cmd_p },
   { "w", "Set a watchpoint with expression EXPR", cmd_w },  
   { "d", "Delete the watchpoint with number N", cmd_d },   
-  { "e", "ELF file reading", cmd_e },
+  { "E", "ELF file reading", cmd_E },
+  { "e", "output etrace record", cmd_e },
   { "t", "Test", cmd_t },      
 };
 
