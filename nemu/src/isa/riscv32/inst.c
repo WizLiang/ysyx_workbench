@@ -288,7 +288,7 @@ static int decode_exec(Decode *s) {
 
 
   //Trap-Return Instructions
-  INSTPAT("0000000 00000 00000 000 00000 11100 11", ecall  , N, s->dnpc = isa_raise_intr(9, s->pc)); //ecall 在用户模式下是 cause = 8，超级模式 cause = 9，机器模式 cause = 11 等等
+  INSTPAT("0000000 00000 00000 000 00000 11100 11", ecall  , N, s->dnpc = isa_raise_intr(11, s->pc)); //ecall 在用户模式下是 cause = 8，超级模式 cause = 9，机器模式 cause = 11 等等
   INSTPAT("0000000 00001 00000 000 00000 11100 11", ebreak , N, NEMUTRAP(s->pc, R(10))); // R(10) is $a0
   INSTPAT("0011000 00010 00000 000 00000 11100 11",  mret  , N, s->dnpc = cpu.csrs.mepc;); //jump to mpec,ignored to set MPRV=0
 

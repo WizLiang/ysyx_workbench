@@ -28,10 +28,11 @@ f(30) f(31)
 
 #define REGS(f) REGS_LO16(f) REGS_HI16(f)
 
+#STORE x5, (5 * XLEN)(sp);
 #define PUSH(n) STORE concat(x, n), (n * XLEN)(sp);
 #define POP(n)  LOAD  concat(x, n), (n * XLEN)(sp);
 
-#define CONTEXT_SIZE  ((NR_REGS + 3) * XLEN)
+#define CONTEXT_SIZE  ((NR_REGS + 3 + 1 ) * XLEN)
 #define OFFSET_SP     ( 2 * XLEN)
 #define OFFSET_CAUSE  ((NR_REGS + 0) * XLEN)
 #define OFFSET_STATUS ((NR_REGS + 1) * XLEN)
@@ -40,32 +41,76 @@ f(30) f(31)
 .align 3
 .globl __am_asm_trap
 __am_asm_trap:
+  # 1) 进入 trap，先为“旧上下文”在当前栈上预留空间
   addi sp, sp, -CONTEXT_SIZE
 
+  # 2) 将所有通用寄存器 (x1, x3, x4, ..., x31) 压栈
   MAP(REGS, PUSH)
 
+  # 3) 读出 mcause, mstatus, mepc 寄存器，存到内存
   csrr t0, mcause
   csrr t1, mstatus
   csrr t2, mepc
-
   STORE t0, OFFSET_CAUSE(sp)
   STORE t1, OFFSET_STATUS(sp)
   STORE t2, OFFSET_EPC(sp)
 
-  # set mstatus.MPRV to pass difftest
-  li a0, (1 << 17)
-  or t1, t1, a0
-  csrw mstatus, t1
+  # ... (可做一些额外处理)
 
+  # 4) 把 “旧上下文的指针 sp” 传给 __am_irq_handle()
   mv a0, sp
-  call __am_irq_handle
+  call __am_irq_handle  # => C 函数返回 "新上下文指针" (也在 a0里)
 
+  # 5) 设置 sp = "新上下文指针"
+  mv sp, a0
+
+  # 6) 从 "新上下文" 里把 mcause, mstatus, mepc 等读到寄存器
+  LOAD t0, OFFSET_CAUSE(sp)
   LOAD t1, OFFSET_STATUS(sp)
   LOAD t2, OFFSET_EPC(sp)
+  csrw mcause, t0
   csrw mstatus, t1
   csrw mepc, t2
 
+  # 7) 把“新上下文”里的所有寄存器弹回到 CPU
   MAP(REGS, POP)
 
+  # 8) 恢复栈指针 (把那 CONTEXT_SIZE 加回去)
   addi sp, sp, CONTEXT_SIZE
+
+  # 9) mret => 跳到 mepc
   mret
+# .align 3
+# .globl __am_asm_trap
+# __am_asm_trap:
+#   addi sp, sp, -CONTEXT_SIZE
+
+#   MAP(REGS, PUSH)
+
+#   csrr t0, mcause
+#   csrr t1, mstatus
+#   csrr t2, mepc
+
+#   STORE t0, OFFSET_CAUSE(sp)
+#   STORE t1, OFFSET_STATUS(sp)
+#   STORE t2, OFFSET_EPC(sp)
+
+#   # set mstatus.MPRV to pass difftest
+#   li a0, (1 << 17)
+#   or t1, t1, a0
+#   csrw mstatus, t1
+
+#   mv a0, sp
+#   call __am_irq_handle
+
+#   mv sp, a0
+
+#   LOAD t1, OFFSET_STATUS(sp)
+#   LOAD t2, OFFSET_EPC(sp)
+#   csrw mstatus, t1
+#   csrw mepc, t2
+
+#   MAP(REGS, POP)
+
+#   addi sp, sp, CONTEXT_SIZE
+#   mret

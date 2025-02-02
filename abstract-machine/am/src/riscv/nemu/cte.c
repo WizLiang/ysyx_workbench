@@ -14,13 +14,15 @@ Context* __am_irq_handle(Context *c) {
     case 8:  // U-mode ecall
     case 9:  // S-mode ecall
     case 11: // M-mode ecall
-      ev.event = EVENT_YIELD; 
+      ev.event = EVENT_YIELD;
+      c->mepc += 4;
+      //printf("EVENT_YIELD\n"); 
       break;
     default:
       ev.event = EVENT_ERROR; 
     break;
-}
-
+    }
+    //printf("Context pointer is %d\n",c);
     c = user_handler(ev, c);
     assert(c != NULL);
   }
@@ -43,7 +45,28 @@ bool cte_init(Context*(*handler)(Event, Context*)) {
 }
 
 Context *kcontext(Area kstack, void (*entry)(void *), void *arg) {
-  return NULL;
+  // uintptr_t high = (uintptr_t)kstack.end;
+  // high -= sizeof(Context); 
+  // //high &= ~((uintptr_t)15);
+
+  // Context *ctx = (Context *)high;
+  // memset(ctx, 0, sizeof(Context));
+  // ctx->mepc = (uintptr_t)entry;
+  
+  // ctx->gpr[10] = (uintptr_t)arg;    // x10 = a0
+  // return ctx;
+  // Context *c = (Context*) kstack.end - 1;
+  // c->mepc = (uintptr_t)entry;
+  // c->gpr[10] = (uintptr_t)arg;
+  // return c;
+  uintptr_t high = (uintptr_t)kstack.end;
+  high -= sizeof(Context);
+  Context *ctx = (Context *)high;
+  memset(ctx, 0, sizeof(Context));
+  ctx->mepc = (uintptr_t)entry;
+  ctx->gpr[10] = (uintptr_t)arg;  // a0 = arg
+  return ctx;
+
 }
 
 void yield() {
