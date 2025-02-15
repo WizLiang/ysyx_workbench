@@ -1,236 +1,81 @@
-// module top(
-//   input clk,
-//   input rst,
-//   input [7:0] data_in,
-//   output reg [7:0] seg0,
-//   output [15:0]led
-// );
-
-// // light u_light(
-// //     .clk(clk),
-// //     .rst(rst),
-// //     .led(led)
-// // );
-// wire [2:0] u_digit;
-// encoder_83 u_encoder_83(
-//   .in(data_in),
-//   .out(u_digit[2:0]),
-//   .valid(led[0])
-// );
-
-// seven_seg_decoder u_seven_seg_decoder(
-//   .digit({1'b0,u_digit}),
-//   .segments(seg0[7:1])
-// );
-
-// assign seg0[0] = 1'b0;
-
-// //assign seg0[7:0] = 8'b00000010;
-
-
-module top(
-  input clk,
-  input rst_n,
-  input [7:0] data_in,
-  //input [2:0] func,
-  input ps2_clk,
-  input ps2_data,
-  
-  // //ex6
-  // input [4:0] btn,
-
-  //output [2:0]func,
-
-
-  output reg [7:0] seg5,
-  output reg [7:0] seg4,
-  output reg [7:0] seg3,
-  output reg [7:0] seg2,
-  output reg [7:0] seg1,
-  output reg [7:0] seg0,
-  output [15:0]led
+module cpu_top #(
+    ADDR_WIDTH = 5,
+    DATA_WIDTH = 32
+) (
+    input clk,
+    input rst,
+    input [DATA_WIDTH-1: 0]inst,
+    output [DATA_WIDTH-1: 0]pc
 );
 
+    ProgramCounter u_pc(
+        .clk(clk),
+        .rst(rst),
+        .en(1'b0),
+        .pc_in(32'h80000000),
+        .pc_out(pc)
+    );
 
-  wire ready;
-  wire [7:0] data;
-  wire nextdata_n;
-  wire [7:0] last_key;
-  wire key_valid;
-  wire key_pressed;
-  wire [7:0] key_count;
-  keyboard_processor u_keyboard_processor(
-    .clk(clk),
-    .clrn(rst_n),
-    .ready(ready),
-    .data(data),
-    .nextdata_n(nextdata_n),
-    .last_key(last_key),
-    .key_valid(key_valid),
-    .key_pressed(key_pressed),
-    .key_count(key_count)
-  );
-
-  wire [7:0] ascii;
-  scancode2ascii u_scancode2ascii(
-    .scancode(last_key),
-    .ascii(ascii)
-  );
-wire overflow;
-  ps2_keyboard u_ps2_keyboard(
-    .clk(clk),
-    .clrn(rst_n),
-    .ps2_clk(ps2_clk),
-    .ps2_data(ps2_data),
-    .data(data),
-    .nextdata_n(nextdata_n),
-    .ready(ready),
-    .overflow(overflow)
-  );
-
-//led
-assign led[0] = key_valid;
-assign led[1] = ready;
-assign led[2] = nextdata_n;
-
-assign led[3] = data_in[3];
-assign led[4] = ps2_data;
-assign led[5] = overflow;
- 
+    // Control and data signals
+    wire [DATA_WIDTH-1 :0] imm;     // Immediate value
+    wire [DATA_WIDTH-1 :0] rs1_data;   
+    wire [DATA_WIDTH-1 :0] rs2_data;
+    wire [DATA_WIDTH-1 :0] rd_data;
 
 
-//display
-seven_seg_decoder u_seven_seg_decoder5(
-  .digit(key_count[7:4]),
-  .enable(1'b1),
-  .segments(seg5[7:1])
-);
+    wire [ADDR_WIDTH-1 :0] rs1_addr;   
+    wire [ADDR_WIDTH-1 :0] rs2_addr;
+    wire [ADDR_WIDTH-1 :0] rd_addr;
+    wire [ADDR_WIDTH-1 :0] rd_tmp;  // let the write bus of the rf all from exu
+    wire is_I_type;                 // I-type instruction
+    wire is_R_type;                 // R-type instruction
+    wire [2:0] func3;               // func3 field
+    wire [6:0] func7;               // func7 field
+    wire [6:0] opcode;              // Opcode field
 
-assign seg5[0] = 1'b1;
+    wire wr_en_reg;
 
-seven_seg_decoder u_seven_seg_decoder4(
-  .digit(key_count[3:0]),
-  .enable(1'b1),
-  .segments(seg4[7:1])
-);
+    // IDU instance
+    IDU u_IDU (
+        .inst(inst),                 // Input instruction
+        .imm(imm),                   // Output immediate value
+        .rs1(rs1_addr),                   // Output rs1 address
+        .rs2(rs2_addr),                   // Output rs2 address
+        .rd(rd_tmp),                     // Output rd address
+        .is_I_type(is_I_type),       // Output I-type signal
+        .is_R_type(is_R_type),       // Output R-type signal
+        .func3(func3),               // Output func3 field
+        .func7(func7),               // Output func7 field
+        .opcode(opcode)              // Output opcode field
+    );
 
-assign seg4[0] = 1'b1;
+    // Registerfile instance
+    Registerfile u_rf (
+        .clk(clk),                    
+        .rst(rst),                    
+        .raddr1(rs1_addr),            // Read rs1 register
+        .rdata1(rs1_data),         
+        .raddr2(rs2_addr),            // Read rs2 register
+        .rdata2(rs2_data),   
+        .waddr(rd_addr),              // Write to destination register
+        .wr_en(wr_en_reg),            // Write enable signal
+        .wdata(rd_data)                  
+    );
 
-
-
-seven_seg_decoder u_seven_seg_decoder3(
-  .digit(ascii[7:4]),
-  .enable(key_pressed),
-  .segments(seg3[7:1])
-);
-
-assign seg3[0] = 1'b1;
-
-
-seven_seg_decoder u_seven_seg_decoder2(
-  .digit(ascii[3:0]),
-  .enable(key_pressed),
-  .segments(seg2[7:1])
-);
-
-assign seg2[0] = 1'b1;
-
-
-seven_seg_decoder u_seven_seg_decoder1(
-  .digit(last_key[7:4]),
-  .enable(key_pressed),
-  .segments(seg1[7:1])
-);
-
-assign seg1[0] = 1'b1;
-
-
-
-
-seven_seg_decoder u_seven_seg_decoder0(
-  .digit(last_key[3:0]),
-  .enable(key_pressed),
-  .segments(seg0[7:1])
-);
-
-assign seg0[0] = 1'b1;
-
-
-
-
-
-// //exercise six
-//   // input clk,
-//   // input rst_n,
-//   // //input [7:0] data_in,
-//   // //input [2:0] func,
-//   // input [4:0] btn,
-//   // output reg [7:0] seg1,
-//   // output reg [7:0] seg0
-//   // //output [15:0]led
-
-//  wire [7:0] data_out;
-// linear_feedback_shift_register u_lfsr(
-//   .clk(|(btn)),
-//   .rst_n(rst_n),
-//   .data_out(data_out)
-// );
-
-// seven_seg_decoder u_seven_seg0(
-//   .digit(data_out[3:0]),
-//   .enable(1'b1),
-//   .segments(seg0[7:1])
-// );
-// assign seg0[0] = 1'b0;
-// seven_seg_decoder u_seven_seg1(
-//   .digit({data_out[7:4]}),
-//   .enable(1'b1),
-//   .segments(seg1[7:1])
-// );
-// assign seg1[0] = 1'b0;
-
-// light u_light(
-//     .clk(clk),
-//     .rst(rst_n),
-//     .led(led)
-// );
-
-
-// // exercise two
-// wire [2:0] u_digit;
-// encoder_83 u_encoder_83(
-//   .in(data_in),
-//   .out(u_digit[2:0]),
-//   .valid(led[0])
-// );
-
-// seven_seg_decoder u_seven_seg_decoder(
-//   .digit({1'b0,u_digit}),
-//   .enable(1'b1),
-//   .segments(seg0[7:1])
-// );
-
-// assign seg0[0] = 1'b0;
-// assign led[3:1] = u_digit[2:0];
-
-
-// // exercise three
-
-
-// Sim_ALU u_Sim_ALU(
-//   .A(data_in[3:0]),
-//   .B(data_in[7:4]),
-//   .func(func),
-//   .result(led[3:0]),
-//   .overflow(led[5]),
-//   .out(led[6]),
-//   .carry(led[7]),
-//   .zero(led[8])
-// );
-
-
-
-
-
+    // EXU instance
+    EXU u_EXU (
+        .func3(func3),                // func3 field
+        .func7(func7),                // func7 field
+        .opcode(opcode),              // Opcode field
+        .is_I_type(is_I_type),        // I-type instruction flag
+        .is_R_type(is_R_type),        // R-type instruction flag
+        .rs1(rs1_data),                    // rs1 register data
+        .rs2(rs2_data),                    // rs2 register data
+        .imm(imm),                    
+        .rd(rd_tmp),                      // Destination register address and cannot use rd_addr for the multiple combinational drivers
+        .wr_en(wr_en_reg),            
+        .waddr(rd_addr),              
+        .wdata(rd_data)             
+    );
 
 endmodule

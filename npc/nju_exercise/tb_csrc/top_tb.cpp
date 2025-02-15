@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string.h>
 
+//keyboard sim
+
 static Vtop dut;  // 顶层模块实例化
 VerilatedFstC* tfp;  // FST 波形文件指针
 

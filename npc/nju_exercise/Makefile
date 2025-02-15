@@ -1,4 +1,4 @@
-TOPNAME = cpu_top
+TOPNAME = top
 #TOPNAME = mux41_2bit
 #exercise 6 shift_reg BarrelShifter
 #constain file dir
@@ -57,6 +57,7 @@ all:$(BIN)
 
 sim:
 	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
+	@echo "Write this Makefile by your self."
 	#$(BIN) +trace  # turn on the wave
 	$(VERILATOR)  --cc --exe --build --trace-fst -j 0 \
 		--top-module $(TOPNAME)\
